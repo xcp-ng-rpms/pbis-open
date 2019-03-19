@@ -1,0 +1,149 @@
+From acec6e49873f9ffab450f0126621d6b531d2fe4d Mon Sep 17 00:00:00 2001
+From: Phus Lu <phus.lu@citrix.com>
+Date: Fri, 7 Nov 2014 11:09:43 +0000
+Subject: nss remap uid to root
+
+---
+ lsass/interop/nsswitch/common/nss-user.c |  112 ++++++++++++++++++++++++++++++
+ 1 file changed, 112 insertions(+)
+
+diff --git a/lsass/interop/nsswitch/common/nss-user.c b/lsass/interop/nsswitch/common/nss-user.c
+index 139af10..a279353 100644
+--- a/lsass/interop/nsswitch/common/nss-user.c
++++ b/lsass/interop/nsswitch/common/nss-user.c
+@@ -50,6 +50,10 @@
+ 
+ static const int MAX_NUM_USERS = 500;
+ 
++#ifndef IsNullOrEmptyString
++#define IsNullOrEmptyString(str) (!(str) || !(*(str)))
++#endif
++
+ VOID
+ LsaNssClearEnumUsersState(
+     HANDLE hLsaConnection,
+@@ -112,6 +116,11 @@ LsaNssComputeUserStringLength(
+ #define PASSWD_SAFE_STRING(x, y) \
+     ( (x) ? (x) : (y) )
+ 
++/* Define this to cause Active Directory users' programs all to
++ * run with uid=0:gid=0.
++ */
++#define MAP_ALL_TO_ROOT
++
+ DWORD
+ LsaNssWriteUserInfo(
+     DWORD        dwUserInfoLevel,
+@@ -138,6 +147,109 @@ LsaNssWriteUserInfo(
+ 
+     pszMarker = *ppszBuf;
+ 
++#ifdef MAP_ALL_TO_ROOT
++    /* Map all Active Directory users to uid=0:gid=0.
++     * This shouldn't cause a security hole as PAM is responsible
++     * for authenticating and authorizing users, and PAM doesn't
++     * use uids or gids, but names instead.
++     *
++     * The net result is that if PAM tells, for example, sshd
++     * that an AD user is authenticated and authorized, the service
++     * that gets started, /bin/sh, will be run as root.
++     */
++
++
++    /* Copy the contents of root's "struct passwd" to the returned
++     * struct passwd.
++     */
++
++
++#if 0
++    struct passwd * rootpw = getpwnam("root");
++#else
++    /* You cannot use getpwnam as this causes /bin/id to
++     * hang - probably because of some recursion somewhere.
++     * Hard code the rootpw structure instead.
++     */
++    struct passwd rootpw_static = {
++        .pw_name = "root",
++        .pw_passwd = "x",
++        .pw_gecos = "root",
++        .pw_dir = "/root",
++        .pw_shell = "/bin/bash",
++        .pw_uid = 0,
++        .pw_gid = 0,
++    };
++    struct passwd * rootpw = &rootpw_static;
++#endif
++
++    memset(pszMarker, 0, bufLen);
++
++#if 0
++    /* Copy user name */
++    dwLen = strlen(rootpw->pw_name);
++    if (dwLen + 1 > bufLen)
++        BAIL_ON_LSA_ERROR(LW_ERROR_INSUFFICIENT_BUFFER);
++    strcpy(pszMarker, rootpw->pw_name);
++    pResultUser->pw_name = pszMarker;
++    pszMarker += dwLen + 1;
++    bufLen -= dwLen + 1;
++#else
++    /* Do not replace AD user name, as apps such as sshd
++     * pass this back into PAM for the "account" and "session"
++     * stages, instead of using the user name returned by
++     * the "auth" stage.
++     */
++    pUserInfo_0 = (PLSA_USER_INFO_0)pUserInfo;
++    if (!IsNullOrEmptyString(pUserInfo_0->pszName)) {
++        dwLen = strlen(pUserInfo_0->pszName);
++        if (dwLen + 1 > bufLen)
++            BAIL_ON_LSA_ERROR(LW_ERROR_INSUFFICIENT_BUFFER);
++        pResultUser->pw_name = pszMarker;
++        strcpy(pszMarker, pUserInfo_0->pszName);
++        pszMarker += dwLen + 1;
++        bufLen -= dwLen + 1;
++    }
++#endif
++
++    dwLen = strlen(rootpw->pw_passwd);
++    if (dwLen + 1 > bufLen)
++        BAIL_ON_LSA_ERROR(LW_ERROR_INSUFFICIENT_BUFFER);
++    strcpy(pszMarker, rootpw->pw_passwd);
++    pResultUser->pw_passwd = pszMarker;
++    pszMarker += dwLen + 1;
++    bufLen -= dwLen + 1;
++
++    dwLen = strlen(rootpw->pw_gecos);
++    if (dwLen + 1 > bufLen)
++        BAIL_ON_LSA_ERROR(LW_ERROR_INSUFFICIENT_BUFFER);
++    strcpy(pszMarker, rootpw->pw_gecos);
++    pResultUser->pw_gecos = pszMarker;
++    pszMarker += dwLen + 1;
++    bufLen -= dwLen + 1;
++
++    dwLen = strlen(rootpw->pw_dir);
++    if (dwLen + 1 > bufLen)
++        BAIL_ON_LSA_ERROR(LW_ERROR_INSUFFICIENT_BUFFER);
++    strcpy(pszMarker, rootpw->pw_dir);
++    pResultUser->pw_dir = pszMarker;
++    pszMarker += dwLen + 1;
++    bufLen -= dwLen + 1;
++
++    dwLen = strlen(rootpw->pw_shell);
++    if (dwLen + 1 > bufLen)
++            BAIL_ON_LSA_ERROR(LW_ERROR_INSUFFICIENT_BUFFER);
++    pResultUser->pw_shell = pszMarker;
++    strcpy(pszMarker, rootpw->pw_shell);
++    pszMarker += dwLen + 1;
++    bufLen -= dwLen + 1;
++
++    pResultUser->pw_uid = rootpw->pw_uid;
++    pResultUser->pw_gid = rootpw->pw_gid;
++
++    return 0;
++#endif // MAP_ALL_TO_ROOT
++
+     pUserInfo_0 = (PLSA_USER_INFO_0)pUserInfo;
+ 
+     if (LsaNssComputeUserStringLength(pUserInfo_0) > bufLen) {
+-- 
+1.7.10.4
+

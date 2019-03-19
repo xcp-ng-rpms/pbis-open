@@ -1,0 +1,26 @@
+From 2397dd44b5015fc6a2608ae84d91923669745d06 Mon Sep 17 00:00:00 2001
+From: Zheng Chai <zheng.chai@citrix.com>
+Date: Wed, 8 Apr 2015 06:48:03 +0000
+Subject: [PATCH] Fix rm libtoolT error Signed-off-by: Zheng Chai
+ <zheng.chai@citrix.com>
+
+---
+ popt/m4/libtool.m4 |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/popt/m4/libtool.m4 b/popt/m4/libtool.m4
+index 39ba996..ffd8717 100644
+--- a/popt/m4/libtool.m4
++++ b/popt/m4/libtool.m4
+@@ -677,7 +677,7 @@ _LT_CONFIG_SAVE_COMMANDS([
+ 
+     cfgfile="${ofile}T"
+     trap "$RM \"$cfgfile\"; exit 1" 1 2 15
+-    $RM "$cfgfile"
++    $RM "-f $cfgfile"
+ 
+     cat <<_LT_EOF >> "$cfgfile"
+ #! $SHELL
+-- 
+1.7.10.4
+

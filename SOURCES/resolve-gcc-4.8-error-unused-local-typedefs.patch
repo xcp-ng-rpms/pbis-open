@@ -1,0 +1,26 @@
+From d3029a67ddeae932b822259658c81194dc5fe937 Mon Sep 17 00:00:00 2001
+From: Zheng Chai <zheng.chai@citrix.com>
+Date: Fri, 3 Apr 2015 10:45:34 +0000
+Subject: [PATCH] resolve gcc 4.8 (error=unused-local-typedefs) Signed-off-by:
+ Zheng Chai <zheng.chai@citrix.com>
+
+---
+ lwreg/MakeKitBuild |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/lwreg/MakeKitBuild b/lwreg/MakeKitBuild
+index 03d7d14..c38cd1a 100644
+--- a/lwreg/MakeKitBuild
++++ b/lwreg/MakeKitBuild
+@@ -31,7 +31,7 @@ configure()
+         SBINDIR="${MK_SBINDIR}" \
+         CACHEDIR="$LW_CACHEDIR"
+ 
+-    MK_CFLAGS="$MK_CFLAGS -Wall -Werror -fno-strict-aliasing"
++    MK_CFLAGS="$MK_CFLAGS -Wall -Werror -Wno-unused-local-typedefs -fno-strict-aliasing"
+ 
+     lw_define_feature_macros
+ 
+-- 
+1.7.10.4
+

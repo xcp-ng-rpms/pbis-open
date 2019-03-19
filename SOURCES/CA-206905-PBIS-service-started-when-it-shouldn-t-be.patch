@@ -1,0 +1,35 @@
+From 6399cc62bdb07396ade80a418686a4ca13c2fccb Mon Sep 17 00:00:00 2001
+From: Phus Lu <phus.lu@citrix.com>
+Date: Fri, 15 Apr 2016 06:07:34 +0000
+Subject: [PATCH] CA-206905: PBIS service started when it shouldn't be
+
+Signed-off-by: Phus Lu <phus.lu@citrix.com>
+---
+ package/open/rpm/open.spec.in | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/package/open/rpm/open.spec.in b/package/open/rpm/open.spec.in
+index 2ad137b..2ee15f3 100644
+--- a/package/open/rpm/open.spec.in
++++ b/package/open/rpm/open.spec.in
+@@ -627,6 +627,9 @@ postinstall()
+     fi
+ 
+ 
++# CA-206905: PBIS service started when it shouldn't be
++# The migration will taken by xenserver-firstboot.git/firstboot.d/60-upgrade-likewise-to-pbis
++if false; then
+     if [ -x /sbin/service ]
+     then
+         run /sbin/service lwsmd start
+@@ -650,6 +653,7 @@ postinstall()
+             fi
+         fi
+     fi
++fi
+ 
+     run_quiet mv /var/lib/likewise /var/lib/likewise.old
+     run_quiet rm -rf "${UPGRADEDIR}"
+-- 
+1.8.3.1
+

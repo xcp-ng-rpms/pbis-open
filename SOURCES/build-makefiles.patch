@@ -1,0 +1,77 @@
+From 9298606b23a86278ed6b0600c3cfaa2395b60cc7 Mon Sep 17 00:00:00 2001
+From: Phus Lu <phus.lu@citrix.com>
+Date: Tue, 4 Nov 2014 17:31:17 +0000
+Subject: [PATCH] From 51ae4cb552518be52c7111a4b243c417c3e9469c Mon Sep 17
+ 00:00:00 2001 From: Phus Lu <phus.lu@citrix.com> Date: Tue,
+ 4 Nov 2014 17:31:17 +0000 Subject: [PATCH] build-makefiles
+
+Signed-off-by: Phus Lu <phus.lu@citrix.com>
+---
+ mkpg/Makefile |   55 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 55 insertions(+)
+ create mode 100644 mkpg/Makefile
+
+diff --git a/mkpg/Makefile b/mkpg/Makefile
+new file mode 100644
+index 0000000..bfb8192
+--- /dev/null
++++ b/mkpg/Makefile
+@@ -0,0 +1,55 @@
++USE_BRANDING := yes
++IMPORT_BRANDING := yes
++include $(B_BASE)/common.mk
++include $(B_BASE)/rpmbuild.mk
++
++REPO_NAME= pbis
++REPO_STAMP = $(call pq_req,$(REPO_NAME))
++REPO = $(call git_loc,$(REPO_NAME))
++CSET_NUMBER = $(shell $(call __git_repo_cset_number,$(REPO)))
++
++LW_OEM = oem18
++LW_HOST_ARCH = $(DOMAIN0_ARCH)
++LW_BUILD_ISAS = $(DOMAIN0_ARCH)
++LW_BUILD_ARCH = $(DOMAIN0_ARCH)
++LW_BUILD_MULTIARCH = none
++LW_BUILD_ID = 1xs$(CSET_NUMBER)
++LW_CONFIG = $(REPO)/build/mk-config/linux-$(DOMAIN0_ARCH)-rpm.conf
++
++-include $(MY_OBJ_DIR)/version.inc
++$(MY_OBJ_DIR)/version.inc: $(REPO_STAMP)
++	rm -f $(MY_OBJ_DIR)/version.inc
++	$(call version-makefile) >> $@
++	awk -F. '{ print "REPO_VERSION=" $$0; }' \
++		< $(REPO_STAMP) >> $@
++	echo XS_RELEASE := "xs$(CSET_NUMBER)" >> $@
++
++.PHONY: build
++build: $(MY_OUTPUT_DIR)/.dirstamp $(RPM_RPMSDIR)/.dirstamp $(MY_SOURCES)/MANIFEST
++	mkdir -p $(MY_OBJ_DIR)/$(COMPONENT)
++	cd $(MY_OBJ_DIR)/$(COMPONENT) && \
++	$(REPO)/configure \
++	        --oem=$(LW_OEM) \
++	        --host-arch=$(LW_HOST_ARCH) \
++	        --build-isas=$(LW_BUILD_ISAS) \
++	        --build-arch=$(LW_BUILD_ARCH) \
++	        --build-multiarch=$(LW_BUILD_MULTIARCH) \
++	        --build-id=$(LW_BUILD_ID) \
++	        $(LW_CONFIG) && \
++	make -j$(J_FLAG) package
++	mkdir -p $(RPM_RPMSDIR)/$(DOMAIN0_ARCH)
++	find $(MY_OBJ_DIR)/$(COMPONENT)/ -name '*.rpm' -exec mv {} $(RPM_RPMSDIR)/$(DOMAIN0_ARCH) \;
++
++clean:
++	cd $(REPO) && git clean -dfx
++	rm -f $(MY_OBJ_DIR)/version.inc
++	rm -rf $(MY_OUTPUT_DIR)/*
++
++.PHONY: sources
++sources: $(MY_SOURCES_DIRSTAMP)
++	cd $(REPO) && \
++	tar cvzpf $(MY_SOURCES)/pbis-open-$(LW_BUILD_ID).tar.gz *
++
++$(MY_SOURCES)/MANIFEST: sources
++	find $(MY_SOURCES) -name 'pbis-open-*.tar.gz' -exec echo $(COMPONENT) gpl file {} \; > $(MY_SOURCES)/MANIFEST
++
+-- 
+1.7.10.4
+

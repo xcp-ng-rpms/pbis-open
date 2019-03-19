@@ -1,0 +1,44 @@
+From 4063c2f77f2f5a34e3b04d29b2f5ff66945a9c5e Mon Sep 17 00:00:00 2001
+From: Phus Lu <phus.lu@citrix.com>
+Date: Tue, 28 Oct 2014 07:22:13 -0400
+Subject: pbis-fix-krb5
+
+---
+ krb5/src/config/pre.in |   20 ++++++++++----------
+ 1 file changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/krb5/src/config/pre.in b/krb5/src/config/pre.in
+index cb66877..00b17a6 100644
+--- a/krb5/src/config/pre.in
++++ b/krb5/src/config/pre.in
+@@ -434,17 +434,17 @@ COMPILE_ET-k5= $(BUILDTOP)/util/et/compile_et -d $(top_srcdir)/util/et
+ #.et.c: ; $(COMPILE_ET) $<
+ 
+ .et.h:
+-	$(RM) et-h-$*.et et-h-$*.c et-h-$*.h
+-	$(CP) $< et-h-$*.et
+-	$(COMPILE_ET) et-h-$*.et
+-	$(MV) et-h-$*.h $*.h
+-	$(RM) et-h-$*.et et-h-$*.c
++	$(RM) $(shell dirname $*)/et-h-$(shell basename $*).et $(shell dirname $*)/et-h-$(shell basename $*).c $(shell dirname $*)/et-h-$(shell basename $*).h
++	$(CP) $< $(shell dirname $*)/et-h-$(shell basename $*).et
++	$(COMPILE_ET) $(shell dirname $*)/et-h-$(shell basename $*).et
++	$(MV) et-h-$(shell basename $*).h $(shell basename $*).h
++	$(RM) $(shell dirname $*)/et-h-$(shell basename $*).et et-h-$(shell basename $*).c
+ .et.c:
+-	$(RM) et-c-$*.et et-c-$*.c et-c-$*.h
+-	$(CP) $< et-c-$*.et
+-	$(COMPILE_ET) et-c-$*.et
+-	$(MV) et-c-$*.c $*.c
+-	$(RM) et-c-$*.et et-c-$*.h
++	$(RM) $(shell dirname $*)/et-c-$(shell basename $*).et $(shell dirname $*)/et-c-$(shell basename $*).c $(shell dirname $*)/et-c-$(shell basename $*).h
++	$(CP) $< $(shell dirname $*)/et-c-$(shell basename $*).et
++	$(COMPILE_ET) $(shell dirname $*)/et-c-$(shell basename $*).et
++	$(MV) et-c-$(shell basename $*).c $(shell basename $*).c
++	$(RM) $(shell dirname $*)/et-c-$(shell basename $*).et et-c-$(shell basename $*).h
+ 
+ # rule to make object files
+ #
+-- 
+1.7.10.4
+

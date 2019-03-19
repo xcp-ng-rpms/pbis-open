@@ -1,0 +1,66 @@
+From 0f05db8c407c7bbf167c8be1177c5f8e69becdcb Mon Sep 17 00:00:00 2001
+From: Phus Lu <phus.lu@citrix.com>
+Date: Tue, 5 May 2015 14:50:38 +0800
+Subject: [PATCH] pbis fix for libxml2 autotools
+
+---
+ libxml2/MakeKitBuild       |  4 +++-
+ libxml2/patch_autotools.sh | 27 +++++++++++++++++++++++++++
+ 2 files changed, 30 insertions(+), 1 deletion(-)
+ create mode 100755 libxml2/patch_autotools.sh
+
+diff --git a/libxml2/MakeKitBuild b/libxml2/MakeKitBuild
+index 8c14c6f..625a1c3 100644
+--- a/libxml2/MakeKitBuild
++++ b/libxml2/MakeKitBuild
+@@ -63,10 +63,12 @@ make()
+         --with-ftp=no \
+         --enable-ipv6=no \
+         --with-python=no
++
++    sh /repos/pbis/libxml2/patch_autotools.sh 2>&1 || true
+ }
+ 
+ xml2_pre()
+ {
+     mk_mkdir "$1${MK_INCLUDEDIR}/libxml2/libxml"
+     mk_mkdir "$1${MK_LIBDIR}"
+-}
+\ No newline at end of file
++}
+diff --git a/libxml2/patch_autotools.sh b/libxml2/patch_autotools.sh
+new file mode 100755
+index 0000000..1cea1cd
+--- /dev/null
++++ b/libxml2/patch_autotools.sh
+@@ -0,0 +1,27 @@
++#!/bin/sh
++# autotools in chroot-dom0 will generate a broken configure,
++# this script is to fix it by perl CLI.
++
++LIBXML2DIR=/repos/pbis/libxml2
++CONFIGURE=${LIBXML2DIR}/configure
++
++# Only patch once
++[ -f ${LIBXML2DIR}/patch_autotools.stamp ] && exit || touch ${LIBXML2DIR}/patch_autotools.stamp
++
++# Fix $RM cfgfile failure
++perl -p -i -e  's#trap .+? 1 2 15##sg' ${CONFIGURE}
++perl -p -i -e  's#\$RM "\$cfgfile"##sg' ${CONFIGURE}
++perl -p -i -e  's#cat <<_LT_EOF >> "\$cfgfile"#cat <<_LT_EOF > "\$cfgfile"#sg' ${CONFIGURE}
++
++# Fix conftest path
++perl -p -i -e 's#(sub/)?conftest\.#/repos/pbis/release/object/libxml2/build_host_x86_64/\1conftest.#sg' ${CONFIGURE}
++perl -p -i -e 's#sub/conftst#/repos/pbis/release/object/libxml2/build_host_x86_64/sub/conftst#sg' ${CONFIGURE}
++
++# Fix conftest.dir path
++perl -p -i -e 's#/repos/pbis/release/object/libxml2/build_host_x86_64/sub/#/repos/pbis/release/object/libxml2/build_host_x86_64/conftest.dir/sub/#sg' ${CONFIGURE}
++perl -p -i -e 's#/repos/pbis/release/object/libxml2/build_host_x86_64/conftest.dir//repos/#/repos/#sg' ${CONFIGURE}
++
++# Fix libxml2/build_host_x86_64/out path
++perl -p -i -e 's#out//repos/pbis/release/object/libxml2/build_host_x86_64/#/repos/pbis/release/object/libxml2/build_host_x86_64/out/#sg' ${CONFIGURE}
++perl -p -i -e 's#`pwd`//repos/pbis/release/#/repos/pbis/release/#sg' ${CONFIGURE}
++
+-- 
+1.8.3.1
+

@@ -1,0 +1,26 @@
+From 623ad90b336ed437dd7cea48f7082567f73cbc72 Mon Sep 17 00:00:00 2001
+From: Zheng Chai <zheng.chai@citrix.com>
+Date: Fri, 3 Apr 2015 07:15:01 +0000
+Subject: [PATCH] Disable AM_C_PROTOTYPES which is for old automake.
+
+Signed-off-by: Zheng Chai <zheng.chai@citrix.com>
+---
+ libxml2/configure.in |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libxml2/configure.in b/libxml2/configure.in
+index 866df62..7e744bc 100644
+--- a/libxml2/configure.in
++++ b/libxml2/configure.in
+@@ -53,7 +53,7 @@ AC_PATH_PROG(XMLLINT, xmllint, /usr/bin/xmllint)
+ AC_PATH_PROG(XSLTPROC, xsltproc, /usr/bin/xsltproc)
+ 
+ dnl Make sure we have an ANSI compiler
+-AM_C_PROTOTYPES
++dnl AM_C_PROTOTYPES
+ test "x$U" != "x" && AC_MSG_ERROR(Compiler not ANSI compliant)
+ 
+ AC_LIBTOOL_WIN32_DLL
+-- 
+1.7.10.4
+
