@@ -1,7 +1,7 @@
 Name: 		pbis-open
 Summary: 	Identity Services for authenticating with Active Directory domains
 Version: 	8.2.2
-Release: 	1.7.2
+Release: 	1.7.2%{dist}
 License: 	GPLv2
 URL:	http://www.beyondtrust.com/Products/PowerBroker-Identity-Services-Open-Edition/
 Source0: https://code.citrite.net/rest/archive/latest/projects/XSU/repos/%{name}/archive?at=f511d332d41&format=tar.gz&prefix=%{name}-%{version}#/%{name}-%{version}.tar.gz
