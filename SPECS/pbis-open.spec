@@ -26,6 +26,7 @@ Patch17: CA-281555-PBIS-in-XS7.1-loses-group-memberships.patch
 Requires: grep, sh-utils, pbis-open-upgrade, libcurl
 Conflicts:  winbind 
 Obsoletes: likewise-open, likewise-base, likewise-domainjoin, likewise-domainjoin-gui, likewise-eventlog, likewise-krb5, likewise-libxml2, likewise-lsass, likewise-lwconfig, likewise-lwio, likewise-lwreg, likewise-lwreskit, likewise-lwtools, likewise-lwupgrade, likewise-mod-auth-kerb, likewise-netlogon, likewise-openldap, likewise-passwd, likewise-pstore, likewise-rpc, likewise-sqlite, likewise-srvsvc
+BuildRequires: gcc-c++
 BuildRequires: gcc, glibc-devel, pam-devel, ncurses-devel, flex, bison, rpm-build, rpm-devel, popt-devel, libxml2-devel, autoconf, automake, libtool, libuuid-devel, libedit-devel, openssl-devel, libcurl-devel, doxygen
 Provides: likewise-open
 Provides: xenserver-active-directory
