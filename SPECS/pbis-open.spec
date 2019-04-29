@@ -1,29 +1,37 @@
 Name: 		pbis-open
 Summary: 	Identity Services for authenticating with Active Directory domains
-Version: 	8.2.2
-Release: 	1.7.2
+Version: 	8.2.3
+Release: 	1.7.3
 License: 	GPLv2
 URL:	http://www.beyondtrust.com/Products/PowerBroker-Identity-Services-Open-Edition/
-Source0: https://code.citrite.net/rest/archive/latest/projects/XSU/repos/%{name}/archive?at=f511d332d41&format=tar.gz&prefix=%{name}-%{version}#/%{name}-%{version}.tar.gz
-Patch0: build-makefiles.patch
-Patch1: Disable-AM_C_PROTOTYPES-which-is-for-old-automake.patch
-Patch2: resolve-gcc-4.8-error-unused-local-typedefs.patch
-Patch3: Fix-rm-libtoolT-error.patch
-Patch4: pbis-fix-krb5.patch
-Patch5: pbis-fix-libxml2.patch
-Patch6: pbis-fix-for-libxml2-autotools.patch
-Patch7: pbis-fix-lsass.patch
-Patch8: CP-13276-Simplify-PBIS8-build-and-decouple-the-PBIS-.patch
-Patch9: nss-remap-uid-to-root.patch
-Patch10: CP-12576-Integrate-automatic-upgrade-tool-from-Likew.patch
-Patch11: CP-12576-Do-symbol-link-for-pam_lsass.so.patch
-Patch12: CA-206905-PBIS-service-started-when-it-shouldn-t-be.patch
-Patch13: CA-208359-PBIS-services-should-start-on-demand-in-do.patch
-Patch14: CA-209500-pbis-systemd-log-spam-on-every-boot.patch
-Patch15: CA-249223-XenCenter-fails-to-login-members-of-a-AD-g.patch
-Patch16: CA-214745-Change-lwsmd.service-from-0755-to-0644.patch
-Patch17: CA-281555-PBIS-in-XS7.1-loses-group-memberships.patch
+
+Source0: https://code.citrite.net/rest/archive/latest/projects/XSU/repos/pbis-open/archive?at=f511d332d41&format=tar.gz&prefix=pbis-open-8.2.3#/pbis-open-8.2.3.tar.gz
+
+Patch0: CA-281555-PBIS-in-XS7.1-loses-group-memberships.patch
+Patch1: CA-291988-Ignore-unknown-krb5.conf-directives.patch
+Patch2: build-makefiles.patch
+Patch3: Disable-AM_C_PROTOTYPES-which-is-for-old-automake.patch
+Patch4: resolve-gcc-4.8-error-unused-local-typedefs.patch
+Patch5: Fix-rm-libtoolT-error.patch
+Patch6: pbis-fix-krb5.patch
+Patch7: pbis-fix-libxml2.patch
+Patch8: pbis-fix-for-libxml2-autotools.patch
+Patch9: pbis-fix-lsass.patch
+Patch10: CP-13276-Simplify-PBIS8-build-and-decouple-the-PBIS-.patch
+Patch11: nss-remap-uid-to-root.patch
+Patch12: CP-12576-Integrate-automatic-upgrade-tool-from-Likew.patch
+Patch13: CP-12576-Do-symbol-link-for-pam_lsass.so.patch
+Patch14: CA-206905-PBIS-service-started-when-it-shouldn-t-be.patch
+Patch15: CA-208359-PBIS-services-should-start-on-demand-in-do.patch
+Patch16: CA-209500-pbis-systemd-log-spam-on-every-boot.patch
+Patch17: CA-249223-XenCenter-fails-to-login-members-of-a-AD-g.patch
+Patch18: CA-214745-Change-lwsmd.service-from-0755-to-0644.patch
+
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/pbis-open/archive?at=f511d332d41&format=tar.gz&prefix=pbis-open-8.2.3#/pbis-open-8.2.3.tar.gz) = f511d332d41e36eb9f43f0066d723d602ab8eeae
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/pbis.pg/archive?at=v1.7.3&format=tar#/pbis.patches.tar) = fb1eca4c776c24ce6ae8d400ca39166753d9e66a
+
 Requires: grep, sh-utils, pbis-open-upgrade, libcurl
+Requires(post): systemd
 Conflicts:  winbind 
 Obsoletes: likewise-open, likewise-base, likewise-domainjoin, likewise-domainjoin-gui, likewise-eventlog, likewise-krb5, likewise-libxml2, likewise-lsass, likewise-lwconfig, likewise-lwio, likewise-lwreg, likewise-lwreskit, likewise-lwtools, likewise-lwupgrade, likewise-mod-auth-kerb, likewise-netlogon, likewise-openldap, likewise-passwd, likewise-pstore, likewise-rpc, likewise-sqlite, likewise-srvsvc
 BuildRequires: gcc, glibc-devel, pam-devel, ncurses-devel, flex, bison, rpm-build, rpm-devel, popt-devel, libxml2-devel, autoconf, automake, libtool, libuuid-devel, libedit-devel, openssl-devel, libcurl-devel, doxygen
@@ -36,6 +44,8 @@ AutoProv:no
 PowerBroker Identity Services Open integrates Unix desktops and servers into an Active Directory environment by joining hosts to the domain and lets Unix applications and services authenticate MS Windows' users and groups via the PAM and Name Service Switch libraries.
 
 %package devel
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/pbis-open/archive?at=f511d332d41&format=tar.gz&prefix=pbis-open-8.2.3#/pbis-open-8.2.3.tar.gz) = f511d332d41e36eb9f43f0066d723d602ab8eeae
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/pbis.pg/archive?at=v1.7.3&format=tar#/pbis.patches.tar) = fb1eca4c776c24ce6ae8d400ca39166753d9e66a
 Summary: PowerBroker Identity Services Open (development)
 Requires: pbis-open
 
@@ -2315,5 +2325,8 @@ exit 0
 /opt/pbis/lib/lwicompat_v4.la
 
 %changelog
+* Wed Oct 31 2018 Liang Dai <liang.dai1@citrix.com> - 8.2.2-1.7.3
+- CA-291988: The pool failed to enable external authentication.
+
 * Fri Jun 23 2017 Simon Rowe <simon.rowe@eu.citrix.com> - 8.2.2-1.5.0
 - CA-257199: remove self-referencing Provides:
