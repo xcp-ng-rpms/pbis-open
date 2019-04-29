@@ -1,0 +1,218 @@
+From ebec24c59b58d61f631de7d02fa43f8419bd8b0a Mon Sep 17 00:00:00 2001
+From: David Morash <dmorash@beyondtrust.com>
+Date: Thu, 18 Aug 2016 11:34:58 -0700
+Subject: [PATCH] Ignore unknown krb5.conf directives. #47014
+
+Treat unknown krb5.conf file entries as comments to avoid
+breaking on krb5.conf format changes.
+
+Misc cleanup.
+---
+ domainjoin/libdomainjoin/src/djkrb5conf.c | 62 +++++++++++++----------
+ lsass/include/lsa/ad.h                    | 23 ++++-----
+ lwio/server/iomgr/lwthreads.c             | 16 ++----
+ lwio/utils/assert.c                       |  8 +--
+ 4 files changed, 53 insertions(+), 56 deletions(-)
+
+diff --git a/domainjoin/libdomainjoin/src/djkrb5conf.c b/domainjoin/libdomainjoin/src/djkrb5conf.c
+index 53e391fbd..3ffed905b 100644
+--- a/domainjoin/libdomainjoin/src/djkrb5conf.c
++++ b/domainjoin/libdomainjoin/src/djkrb5conf.c
+@@ -317,37 +317,47 @@ static DWORD ParseLine(Krb5Entry **parent, const char *linestr, const char **end
+     }
+     else
+     {
+-        //This is either a name value pair, or a compound element
++        // This is either a name value pair, a compound element, 
++        // or a (currently unsupported) directive
++        // For now, treat anything we don't understand/support as a comment
++        // so that we don't break with every change to the format
+         GCE(ceError = CTReadToken(&pos, &line->name, " \t", "=\r\n", ""));
++
+         if(*pos != '=')
+         {
+-            DJ_LOG_ERROR("Expecting krb5 name value or compound statement '%s' to have a = at position %d",
+-                    linestr, pos - linestr);
+-            GCE(ceError = ERROR_BAD_FORMAT);
+-        }
+-        oldpos = pos;
+-        GCE(ceError = CTReadToken(&pos, &line->beginSeparator, " \t", "\r\n", ""));
+-        if(*pos == '{')
+-        {
+-            DJ_LOG_VERBOSE("Found krb5 compound statement '%s'", linestr);
+-            //Oops, looks like this was really a compound statement, so we want to store the = and the { in the beginSeparator.
+-            CTFreeParseTokenContents(&line->beginSeparator);
+-            pos = oldpos;
+-            GCE(ceError = CTReadToken(&pos, &line->beginSeparator, "", "\r\n", " \t"));
+-            if(!CTStrEndsWith(line->beginSeparator.value, "{"))
++            // Not a nv-pair, or compound element
++            CTFreeParseTokenContents(&line->name);
++
++            while(*pos != '\0' && *pos != '\n' && *pos != '\r') {
++                pos++;
++            }
++            GCE(ceError = CTStrndup(token_start, pos - token_start, &line->leadingWhiteSpace));
++        } else {
++            oldpos = pos;
++            GCE(ceError = CTReadToken(&pos, &line->beginSeparator, " \t", "\r\n", ""));
++
++            if(*pos == '{')
+             {
+-                DJ_LOG_ERROR("Expecting krb5 compound statement line '%s' to end with a {",
+-                        linestr);
+-                GCE(ceError = ERROR_BAD_FORMAT);
++                DJ_LOG_VERBOSE("Found krb5 compound statement '%s'", linestr);
++                //Oops, looks like this was really a compound statement, so we want to store the = and the { in the beginSeparator.
++                CTFreeParseTokenContents(&line->beginSeparator);
++                pos = oldpos;
++                GCE(ceError = CTReadToken(&pos, &line->beginSeparator, "", "\r\n", " \t"));
++                if(!CTStrEndsWith(line->beginSeparator.value, "{"))
++                {
++                    DJ_LOG_ERROR("Expecting krb5 compound statement line '%s' to end with a {",
++                            linestr);
++                    GCE(ceError = ERROR_BAD_FORMAT);
++                }
++                //Add future lines under this statement
++                expectChildren = TRUE;
++            }
++            else
++            {
++                DJ_LOG_VERBOSE("Found krb5 name value pair '%s'", linestr);
++                //This is name value statement
++                GCE(ceError = CTReadToken(&pos, &line->value, "", "\r\n", " \t"));
+             }
+-            //Add future lines under this statement
+-            expectChildren = TRUE;
+-        }
+-        else
+-        {
+-            DJ_LOG_VERBOSE("Found krb5 name value pair '%s'", linestr);
+-            //This is name value statement
+-            GCE(ceError = CTReadToken(&pos, &line->value, "", "\r\n", " \t"));
+         }
+     }
+ 
+diff --git a/lsass/include/lsa/ad.h b/lsass/include/lsa/ad.h
+index 744cd2c62..8ab40eed5 100644
+--- a/lsass/include/lsa/ad.h
++++ b/lsass/include/lsa/ad.h
+@@ -216,20 +216,15 @@ LsaAdJoinDomainDn(
+  * flag values.
+  *
+  * @param[in] hLsaConnection a connection handle
+- * @param[in] pHostname the computer name to join with
+- * @param[in] pHostDnsDomain the DNS domain name of the computer
+- * @param[in] pDomain the fully-qualified domain name to join
+- * @param[in] pOu an optional OU (organizational unit) to join
+- * specified as a DN.
+- * @param[in] pUsername the name of an AD user with permission with
+- * permission to join computers to the target domain
+- * @param[in] pPassword the password for the user
+- * @param[in] pOsName the operating system name to set on
+- * the computer object
+- * @param[in] pOsVersion the operating system version to set on
+- * the computer object
+- * @param[in] pOsServicePack the service pack level to set on
+- * the computer object
++ * @param[in] pszHostname the computer name to join with
++ * @param[in] pszHostDnsDomain the DNS domain name of the computer
++ * @param[in] pszDomain the fully-qualified domain name to join
++ * @param[in] pszOu an optional OU (organizational unit) to join specified as a DN
++ * @param[in] pszUsername the name of an AD user with permission with permission to join computers to the target domain
++ * @param[in] pszPassword the password for the user
++ * @param[in] pszOSName the operating system name to set on the computer object
++ * @param[in] pszOSVersion the operating system version to set on the computer object
++ * @param[in] pszOSServicePack the service pack level to set on the computer object
+  * @param[in] dwFlags additional flags to control join behavior
+  * @param[in] dwUac additional user account control flags
+  * @retval LW_ERROR_SUCCESS success
+diff --git a/lwio/server/iomgr/lwthreads.c b/lwio/server/iomgr/lwthreads.c
+index a96af7f8c..3e523de88 100644
+--- a/lwio/server/iomgr/lwthreads.c
++++ b/lwio/server/iomgr/lwthreads.c
+@@ -468,8 +468,7 @@ LwRtlpTimedWaitEvent(
+ 
+     PTHREAD_MUTEX_LOCK(&pEvent->Private.Mutex);
+ 
+-    // Protect against spurious or stolen wakes.  Note thta
+-    // this should never happen for pthread condition variables.
++    // Protect against spurious or stolen wakes.  
+     while (!IsSetFlag(pEvent->Private.Flags, _LW_RTL_EVENT_FLAG_SET))
+     {
+         PTHREAD_COND_TIMEDWAIT(
+@@ -503,13 +502,10 @@ LwRtlpSimpleWaitEvent(
+ 
+     PTHREAD_MUTEX_LOCK(&pEvent->Private.Mutex);
+ 
+-    // Protect against spurious or stolen wakes.  Note thta
+-    // this should never happen for pthread condition variables.
++    // Protect against spurious or stolen wakes.  
+     while (!IsSetFlag(pEvent->Private.Flags, _LW_RTL_EVENT_FLAG_SET))
+     {
+         PTHREAD_COND_WAIT(&pEvent->Private.Condition, &pEvent->Private.Mutex);
+-        // TODO-Perhaps remove this assert
+-        LWIO_ASSERT(IsSetFlag(pEvent->Private.Flags, _LW_RTL_EVENT_FLAG_SET));
+     }
+ 
+     PTHREAD_MUTEX_UNLOCK(&pEvent->Private.Mutex);
+@@ -543,8 +539,7 @@ LwRtlWaitEvent(
+ 
+     if (Timeout)
+     {
+-        // Protect against spurious or stolen wakes.  Note thta
+-        // this should never happen for pthread condition variables.
++        // Protect against spurious or stolen wakes.  
+         while (!IsSetFlag(pEvent->Private.Flags, _LW_RTL_EVENT_FLAG_SET))
+         {
+             PTHREAD_COND_TIMEDWAIT(
+@@ -560,13 +555,10 @@ LwRtlWaitEvent(
+     }
+     else
+     {
+-        // Protect against spurious or stolen wakes.  Note thta
+-        // this should never happen for pthread condition variables.
++        // Protect against spurious or stolen wakes.  
+         while (!IsSetFlag(pEvent->Private.Flags, _LW_RTL_EVENT_FLAG_SET))
+         {
+             PTHREAD_COND_WAIT(&pEvent->Private.Condition, &pEvent->Private.Mutex);
+-            // TODO-Perhaps remove this assert
+-            LWIO_ASSERT(IsSetFlag(pEvent->Private.Flags, _LW_RTL_EVENT_FLAG_SET));
+         }
+         isSignalled = TRUE;
+     }
+diff --git a/lwio/utils/assert.c b/lwio/utils/assert.c
+index f57f76dcc..bb0cce6e6 100644
+--- a/lwio/utils/assert.c
++++ b/lwio/utils/assert.c
+@@ -60,12 +60,12 @@ LwIoAssertionFailed(
+             Function,
+             File,
+             Line,
+-            "ASSERION FAILED: Expression = (%s), Message = '%s'",
++            "ASSERTION FAILED: Expression = (%s), Message = '%s'",
+             Expression,
+             Message);
+         fprintf(
+             stderr,
+-            "ASSERION FAILED: Expression = (%s), Message = '%s'",
++            "ASSERTION FAILED: Expression = (%s), Message = '%s'",
+             Expression,
+             Message);
+     }
+@@ -77,11 +77,11 @@ LwIoAssertionFailed(
+             Function,
+             File,
+             Line,
+-            "ASSERION FAILED: Expression = (%s)",
++            "ASSERTION FAILED: Expression = (%s)",
+             Expression);
+         fprintf(
+             stderr,
+-            "ASSERION FAILED: Expression = (%s)",
++            "ASSERTION FAILED: Expression = (%s)",
+             Expression);
+     }
+     fprintf(stderr, "\n");
+-- 
+2.17.1
+
