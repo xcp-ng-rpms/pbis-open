@@ -1,7 +1,7 @@
 Name: 		pbis-open
 Summary: 	Identity Services for authenticating with Active Directory domains
 Version: 	8.2.3
-Release: 	1.7.3
+Release: 	1.7.4
 License: 	GPLv2
 URL:	http://www.beyondtrust.com/Products/PowerBroker-Identity-Services-Open-Edition/
 
@@ -26,9 +26,9 @@ Patch15: CA-208359-PBIS-services-should-start-on-demand-in-do.patch
 Patch16: CA-209500-pbis-systemd-log-spam-on-every-boot.patch
 Patch17: CA-249223-XenCenter-fails-to-login-members-of-a-AD-g.patch
 Patch18: CA-214745-Change-lwsmd.service-from-0755-to-0644.patch
+Patch19: CA-324607-Do-not-add-capath-entries-for-SLD-54456.patch
 
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/pbis-open/archive?at=f511d332d41&format=tar.gz&prefix=pbis-open-8.2.3#/pbis-open-8.2.3.tar.gz) = f511d332d41e36eb9f43f0066d723d602ab8eeae
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/pbis.pg/archive?at=v1.7.3&format=tar#/pbis.patches.tar) = fb1eca4c776c24ce6ae8d400ca39166753d9e66a
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/pbis.pg/archive?at=v1.7.4&format=tar#/pbis.patches.tar) = 193c94ed8880e190955e6e60e7eabe40259f5154
 
 Requires: grep, sh-utils, pbis-open-upgrade, libcurl
 Requires(post): systemd
@@ -44,8 +44,7 @@ AutoProv:no
 PowerBroker Identity Services Open integrates Unix desktops and servers into an Active Directory environment by joining hosts to the domain and lets Unix applications and services authenticate MS Windows' users and groups via the PAM and Name Service Switch libraries.
 
 %package devel
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/pbis-open/archive?at=f511d332d41&format=tar.gz&prefix=pbis-open-8.2.3#/pbis-open-8.2.3.tar.gz) = f511d332d41e36eb9f43f0066d723d602ab8eeae
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/pbis.pg/archive?at=v1.7.3&format=tar#/pbis.patches.tar) = fb1eca4c776c24ce6ae8d400ca39166753d9e66a
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/pbis.pg/archive?at=v1.7.4&format=tar#/pbis.patches.tar) = 193c94ed8880e190955e6e60e7eabe40259f5154
 Summary: PowerBroker Identity Services Open (development)
 Requires: pbis-open
 
@@ -2325,6 +2324,9 @@ exit 0
 /opt/pbis/lib/lwicompat_v4.la
 
 %changelog
+* Fri Sep 20 2019 Deli Zhang <deli.zhang@citrix.com> - 8.2.3-1.7.4
+- CA-324607: domainjoin-cli crashes for empty second-level domain
+
 * Wed Oct 31 2018 Liang Dai <liang.dai1@citrix.com> - 8.2.2-1.7.3
 - CA-291988: The pool failed to enable external authentication.
 
