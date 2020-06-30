@@ -1,0 +1,22 @@
+diff --git a/config/linux/redhat/lwsmd.service.in b/config/linux/redhat/lwsmd.service.in
+index ef23378..20cbd3c 100644
+--- a/config/linux/redhat/lwsmd.service.in
++++ b/config/linux/redhat/lwsmd.service.in
+@@ -14,6 +14,3 @@ ExecStop=@MK_BINDIR@/lwsm shutdown
+ # lwsmd time to finish.
+ KillSignal=SIGCONT
+ PrivateTmp=true
+-
+-[Install]
+-WantedBy=multi-user.target nss-lookup.target
+diff --git a/config/upgrade-likewise-to-pbis.service b/config/upgrade-likewise-to-pbis.service
+index 9cb34c4..6d1ef7d 100644
+--- a/config/upgrade-likewise-to-pbis.service
++++ b/config/upgrade-likewise-to-pbis.service
+@@ -8,6 +8,3 @@ After=lwsmd.service
+ Type=oneshot
+ ExecStart=/opt/pbis/libexec/upgrade-likewise-to-pbis
+ RemainAfterExit=yes
+-
+-[Install]
+-WantedBy=multi-user.target

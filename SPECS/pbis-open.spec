@@ -1,7 +1,7 @@
 Name: 		pbis-open
 Summary: 	Identity Services for authenticating with Active Directory domains
 Version: 	8.2.3
-Release: 	1.7.4%{?dist}
+Release: 	1.7.7%{?dist}
 License: 	GPLv2
 URL:	http://www.beyondtrust.com/Products/PowerBroker-Identity-Services-Open-Edition/
 
@@ -26,16 +26,19 @@ Patch15: CA-208359-PBIS-services-should-start-on-demand-in-do.patch
 Patch16: CA-209500-pbis-systemd-log-spam-on-every-boot.patch
 Patch17: CA-249223-XenCenter-fails-to-login-members-of-a-AD-g.patch
 Patch18: CA-214745-Change-lwsmd.service-from-0755-to-0644.patch
-Patch19: CA-324607-Do-not-add-capath-entries-for-SLD-54456.patch
+Patch19: upgrade-likewise-to-pbis.patch
+Patch20: CA-324607-Do-not-add-capath-entries-for-SLD-54456.patch
+Patch21: CA-338602-lwsmd-daemon-should-not-be-running-when-AD-is-not-configured
 
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/pbis.pg/archive?at=v1.7.4&format=tar#/pbis.patches.tar) = 193c94ed8880e190955e6e60e7eabe40259f5154
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/pbis.pg/archive?at=v1.7.7&format=tar#/pbis.patches.tar) = e354e19eb1412eeac8618f582942a14d6f23c13e
 
 Requires: grep, sh-utils, pbis-open-upgrade, libcurl
-Requires(post): systemd
 Conflicts:  winbind 
 Obsoletes: likewise-open, likewise-base, likewise-domainjoin, likewise-domainjoin-gui, likewise-eventlog, likewise-krb5, likewise-libxml2, likewise-lsass, likewise-lwconfig, likewise-lwio, likewise-lwreg, likewise-lwreskit, likewise-lwtools, likewise-lwupgrade, likewise-mod-auth-kerb, likewise-netlogon, likewise-openldap, likewise-passwd, likewise-pstore, likewise-rpc, likewise-sqlite, likewise-srvsvc
 BuildRequires: gcc-c++
 BuildRequires: gcc, glibc-devel, pam-devel, ncurses-devel, flex, bison, rpm-build, rpm-devel, popt-devel, libxml2-devel, autoconf, automake, libtool, libuuid-devel, libedit-devel, openssl-devel, libcurl-devel, doxygen
+BuildRequires: systemd-devel
+%{?systemd_requires}
 Provides: likewise-open
 Provides: xenserver-active-directory
 AutoReq:no
@@ -45,7 +48,7 @@ AutoProv:no
 PowerBroker Identity Services Open integrates Unix desktops and servers into an Active Directory environment by joining hosts to the domain and lets Unix applications and services authenticate MS Windows' users and groups via the PAM and Name Service Switch libraries.
 
 %package devel
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/pbis.pg/archive?at=v1.7.4&format=tar#/pbis.patches.tar) = 193c94ed8880e190955e6e60e7eabe40259f5154
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/pbis.pg/archive?at=v1.7.7&format=tar#/pbis.patches.tar) = e354e19eb1412eeac8618f582942a14d6f23c13e
 Summary: PowerBroker Identity Services Open (development)
 Requires: pbis-open
 
@@ -730,6 +733,10 @@ do
 	cp -a transformerbuild/stage$FILE %{buildroot}$FILE
 done
 
+install -m 755 config/upgrade-likewise-to-pbis %{buildroot}/opt/pbis/libexec
+mkdir -p -m 755 %{buildroot}/%{_unitdir}
+install -m 644 config/upgrade-likewise-to-pbis.service %{buildroot}/%{_unitdir}
+
 %define AdProviderPath /opt/pbis/lib/lsa-provider/ad_open.so
 %post
 DAEMONS_TO_HALT="reapsysld lsassd lwiod netlogond eventlogd dcerpcd lwregd lwsmd"
@@ -1340,12 +1347,14 @@ postinstall()
 # CA-206905: PBIS service started when it shouldn't be
 # The migration will taken by xenserver-firstboot.git/firstboot.d/60-upgrade-likewise-to-pbis
 # However, CA-261195 shows we need to start if this is an upgrade not a fresh install
-if [ $1 -gt 1 ]; then
+# CA-338602, In upgrade case, we only start lwsmd when the domain is joined
+determine_join_status
+if [[ ( $1 -gt 1 ) && ( -n "$result" ) ]]; then
     if [ -x /sbin/service ]
     then
         run /sbin/service lwsmd start
     else
-        run '/etc/init.d/lwsmd' start
+        run /usr/bin/systemctl start lwsmd
     fi
 fi
 
@@ -1378,11 +1387,14 @@ fi
     symlink_pam_lsass
     
     logfile "Package: PowerBroker Identity Services Open postinstall finished"
-    exit 0
 }
 
 echo "Pre postinstall"
 postinstall $1
+# Disable and re-enable the service to update the [install] section of the service
+/usr/bin/systemctl --quiet disable upgrade-likewise-to-pbis.service || :
+/usr/bin/systemctl --quiet disable lwsmd.service || :
+/usr/bin/systemctl --quiet enable /etc/pbis/redhat/lwsmd.service || :
 echo "Post postinstall"
 
 %pre
@@ -1528,6 +1540,8 @@ else
 fi
 
 %preun
+%systemd_preun upgrade-likewise-to-pbis.service
+
 DAEMONS_TO_HALT="lwsmd lwregd netlogond lwiod dcerpcd eventlogd lsassd reapsysld"
 
 UPGRADEDIR=/var/lib/pbis-upgrade
@@ -1656,6 +1670,9 @@ if [ $1 -eq 0 ]; then
     preuninstall_remove
 fi
 exit 0
+
+%postun
+%systemd_postun upgrade-likewise-to-pbis.service
 
 %files 
 %defattr(-,root,root)
@@ -1914,6 +1931,7 @@ exit 0
 /opt/pbis/share/fedora/13/pbis.if
 /opt/pbis/share/fedora/13/pbis.pp
 /opt/pbis/libexec/pbis-support.pl
+/opt/pbis/libexec/upgrade-likewise-to-pbis
 /opt/pbis/docs/pbis-open-installation-and-administration-guide.pdf
 /opt/pbis/docs/pbis-quick-start-guide-for-linux.pdf
 /opt/pbis/lib/krb5/plugins/preauth/pacreq.so
@@ -1933,6 +1951,7 @@ exit 0
 /etc/pbis/redhat/lwsmd
 /etc/pbis/redhat/lwsmd.service
 /etc/pbis/suse/lwsmd
+%{_unitdir}/upgrade-likewise-to-pbis.service
 %dir /var/lib/pbis
 %dir /var/lib/pbis/rpc
 
@@ -2325,6 +2344,12 @@ exit 0
 /opt/pbis/lib/lwicompat_v4.la
 
 %changelog
+* Mon Jun 1 2020 Lin Liu <lin.liu@citrix.com> - 8.2.3-1.7.7
+- CA-340470: Remove lwsmd from auto-start in upgrade case
+
+* Tue Jan 21 2020 Ross Lagerwall <ross.lagerwall@citrix.com> - 8.2.3-1.7.5
+- CP-31092: Move upgrade-likewise-to-pbis to its own service
+
 * Fri Sep 20 2019 Deli Zhang <deli.zhang@citrix.com> - 8.2.3-1.7.4
 - CA-324607: domainjoin-cli crashes for empty second-level domain
 
